@@ -1,0 +1,4 @@
+node_modules/
+govtex.db
+govtex.db-*
+.env
