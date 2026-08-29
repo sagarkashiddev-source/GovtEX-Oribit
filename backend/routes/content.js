@@ -3,6 +3,17 @@ const db = require('../db');
 
 const router = express.Router();
 
+function withPdfUrl(note) {
+  return { ...note, pdf_url: note.pdf_path ? `/uploads/${note.pdf_path}` : null };
+}
+function withVideoUrl(video) {
+  return {
+    ...video,
+    video_url: video.video_path ? `/uploads/${video.video_path}` : null,
+    youtube_url: video.youtube_url || null
+  };
+}
+
 router.get('/subjects', (req, res) => {
   const subjects = db.prepare(`
     SELECT s.*,
@@ -13,13 +24,13 @@ router.get('/subjects', (req, res) => {
 });
 
 router.get('/subjects/:id/notes', (req, res) => {
-  const notes = db.prepare('SELECT id, subject_id, title, description, pages, downloads FROM notes WHERE subject_id = ? ORDER BY title').all(req.params.id);
-  res.json({ notes });
+  const notes = db.prepare('SELECT id, subject_id, title, description, pages, downloads, pdf_path FROM notes WHERE subject_id = ? ORDER BY title').all(req.params.id);
+  res.json({ notes: notes.map(withPdfUrl) });
 });
 
 router.get('/subjects/:id/videos', (req, res) => {
   const videos = db.prepare('SELECT * FROM videos WHERE subject_id = ? ORDER BY title').all(req.params.id);
-  res.json({ videos });
+  res.json({ videos: videos.map(withVideoUrl) });
 });
 
 router.get('/notes', (req, res) => {
@@ -28,7 +39,7 @@ router.get('/notes', (req, res) => {
   const params = [];
   if (q) { sql += ' WHERE n.title LIKE ?'; params.push(`%${q}%`); }
   sql += ' ORDER BY n.downloads DESC';
-  res.json({ notes: db.prepare(sql).all(...params) });
+  res.json({ notes: db.prepare(sql).all(...params).map(withPdfUrl) });
 });
 
 router.get('/notes/:id', (req, res) => {
@@ -36,7 +47,7 @@ router.get('/notes/:id', (req, res) => {
     JOIN subjects s ON n.subject_id = s.id WHERE n.id = ?`).get(req.params.id);
   if (!note) return res.status(404).json({ error: 'Note not found' });
   db.prepare('UPDATE notes SET downloads = downloads + 1 WHERE id = ?').run(req.params.id);
-  res.json({ note });
+  res.json({ note: withPdfUrl(note) });
 });
 
 router.get('/videos', (req, res) => {
@@ -45,13 +56,13 @@ router.get('/videos', (req, res) => {
   const params = [];
   if (q) { sql += ' WHERE v.title LIKE ?'; params.push(`%${q}%`); }
   sql += ' ORDER BY v.views DESC';
-  res.json({ videos: db.prepare(sql).all(...params) });
+  res.json({ videos: db.prepare(sql).all(...params).map(withVideoUrl) });
 });
 
 router.get('/videos/:id', (req, res) => {
   const video = db.prepare(`SELECT v.*, s.name as subject_name FROM videos v JOIN subjects s ON v.subject_id = s.id WHERE v.id = ?`).get(req.params.id);
   if (!video) return res.status(404).json({ error: 'Video not found' });
-  res.json({ video });
+  res.json({ video: withVideoUrl(video) });
 });
 
 module.exports = router;

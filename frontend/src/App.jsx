@@ -21,6 +21,7 @@ import VideoLectures from './pages/VideoLectures';
 import VideoDetail from './pages/VideoDetail';
 import Saved from './pages/Saved';
 import Profile from './pages/Profile';
+import AdminContent from './pages/AdminContent';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/" element={<RedirectIfAuthed><Landing /></RedirectIfAuthed>} />
           <Route path="/login" element={<RedirectIfAuthed><Login /></RedirectIfAuthed>} />
           <Route path="/signup" element={<RedirectIfAuthed><Signup /></RedirectIfAuthed>} />
+          <Route path="/admin" element={<AdminContent />} />
 
           <Route element={<RequireAuth />}>
             <Route path="/onboarding/basic" element={<OnboardingBasic />} />

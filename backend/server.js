@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -16,6 +17,10 @@ app.use('/api/applications', require('./routes/applications'));
 app.use('/api/content', require('./routes/content'));
 app.use('/api/saved', require('./routes/saved'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/admin', require('./routes/admin'));
+
+// Uploaded PDFs and video files (served as-is; downloads have real filenames via note.pdf_original_name in the API response)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, service: 'govtex-orbit-backend' }));
 

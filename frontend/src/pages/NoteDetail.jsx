@@ -41,7 +41,16 @@ export default function NoteDetail() {
           <span className="badge badge-neutral"><Icon name="download" size={14} /> {note.downloads.toLocaleString('en-IN')} downloads</span>
         </div>
 
-        <button className="btn btn-primary btn-block mb-lg"><Icon name="download" /> Download PDF</button>
+        {note.pdf_url ? (
+          <a href={note.pdf_url} download={note.pdf_original_name || undefined} className="btn btn-primary btn-block mb-lg">
+            <Icon name="download" /> Download PDF
+          </a>
+        ) : (
+          <div className="card mb-lg" style={{ background: 'var(--surface-container-low)', border: 'none', textAlign: 'center' }}>
+            <Icon name="upload_file" style={{ color: 'var(--outline)' }} />
+            <p className="text-sm text-muted mt-md" style={{ marginTop: 6 }}>A downloadable PDF hasn't been uploaded for this note yet.</p>
+          </div>
+        )}
 
         <div className="card" style={{ whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: '22px' }}>
           {note.content}

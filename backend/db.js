@@ -98,6 +98,8 @@ CREATE TABLE IF NOT EXISTS notes (
   content TEXT,
   pages INTEGER,
   downloads INTEGER DEFAULT 0,
+  pdf_path TEXT,
+  pdf_original_name TEXT,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -109,7 +111,9 @@ CREATE TABLE IF NOT EXISTS videos (
   duration_min INTEGER,
   views INTEGER DEFAULT 0,
   thumbnail_color TEXT DEFAULT '#1E3A8A',
-  description TEXT
+  description TEXT,
+  video_path TEXT,
+  youtube_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS saved_items (
@@ -121,5 +125,18 @@ CREATE TABLE IF NOT EXISTS saved_items (
   UNIQUE(user_id, item_type, item_id)
 );
 `);
+
+// --- Lightweight migrations for columns added after initial release ---
+// SQLite has no "ADD COLUMN IF NOT EXISTS", so check pragma table_info first.
+function ensureColumn(table, column, definition) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
+  if (!cols.includes(column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+ensureColumn('notes', 'pdf_path', 'TEXT');
+ensureColumn('notes', 'pdf_original_name', 'TEXT');
+ensureColumn('videos', 'video_path', 'TEXT');
+ensureColumn('videos', 'youtube_url', 'TEXT');
 
 module.exports = db;

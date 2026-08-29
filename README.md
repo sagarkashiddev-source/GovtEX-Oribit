@@ -87,6 +87,33 @@ npm run build     # outputs static files to frontend/dist
 Serve `frontend/dist` with any static host, and point it at a deployed instance of the
 backend (set `VITE`-style env/proxy or update `src/api.js` to use an absolute API URL).
 
+## Uploading real study notes (PDFs) and video lectures
+
+The seeded notes and videos are demo content — real text/metadata, but no real files
+attached. There's a hidden admin page for uploading your own:
+
+1. Set an `ADMIN_KEY` in your `.env` file (copy `.env.example` to `.env` first) — any
+   private string only you know. On Railway/Render, add it as an environment variable
+   instead.
+2. Go to `/admin` on your running app (e.g. `http://localhost:5173/admin` locally, or
+   `https://<your-domain>/admin` once deployed). It's not linked from anywhere in the app
+   on purpose — bookmark it yourself.
+3. Enter your admin key, then for each note you can **upload a PDF** (up to 25MB), and for
+   each video you can either **paste a YouTube link** or **upload a video file directly**
+   (up to 500MB — fine for a personal library, but for a lot of long-form video at scale
+   you'd eventually want a proper video host like YouTube unlisted/Vimeo instead of storing
+   raw files on your server).
+
+Once uploaded, students immediately see a real "Download PDF" button on that note, and
+the video lecture actually plays (YouTube embed or native `<video>` player) instead of
+showing a placeholder.
+
+**Note on persistence:** uploaded files are stored in `backend/uploads/`, which — like the
+SQLite database — will be wiped on every redeploy on Render/Railway's free tiers (see the
+persistence note above). For content you want to keep, either use a paid persistent volume,
+or point video lectures at YouTube (those never disappear on redeploy since only the link
+is stored, not the video itself).
+
 ## Deploying it so it's reachable from anywhere
 
 The repo includes a `Dockerfile` at the root that builds the frontend and bundles it into
