@@ -4,15 +4,20 @@ import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import BottomNav from '../components/BottomNav';
 import Icon from '../components/Icon';
-import { StatCard, EligibilityBadge, ProgressBar } from '../components/Widgets';
-import { LoadingList, EmptyState } from '../components/States';
+import { LoadingList } from '../components/States';
 
-function fmtDate(d) {
-  if (!d) return '-';
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
-const STATUS_LABEL = { draft: 'Draft', applied: 'Applied', admit_card: 'Admit Card', exam_taken: 'Exam Taken', result: 'Result Out' };
+function fmtDate(d) {
+  const parsed = new Date(d);
+  if (isNaN(parsed)) return d;
+  return parsed.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -24,79 +29,95 @@ export default function Dashboard() {
 
   const name = profile?.user?.name?.split(' ')[0] || 'there';
 
+  if (!data) {
+    return (
+      <div className="app-shell with-desktop-nav">
+        <BottomNav />
+        <div className="page-container" style={{ paddingTop: 24 }}>
+          <LoadingList count={3} height={100} />
+        </div>
+      </div>
+    );
+  }
+
+  const { bestMatch, stats, upcomingDeadlines } = data;
+
   return (
     <div className="app-shell with-desktop-nav">
       <BottomNav />
-      <div className="page-container" style={{ paddingTop: 24 }}>
-        <div className="flex items-center gap-sm mb-md">
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: profile?.user?.avatar_color || '#1E3A8A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-            {name[0]?.toUpperCase()}
-          </div>
-          <div>
-            <p className="text-sm text-muted">Welcome back,</p>
-            <h1 style={{ fontSize: 20, fontWeight: 700 }}>{name}</h1>
-          </div>
-        </div>
+      <div className="page-container" style={{ paddingTop: 28 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700 }}>{greeting()}, {name} 👋</h1>
+        <p className="text-sm text-muted mt-md" style={{ marginTop: 4, marginBottom: 20 }}>
+          Ready for your next exam?
+        </p>
 
-        {!data ? <LoadingList count={2} height={100} /> : (
+        {/* One-line summary instead of a stat grid */}
+        <p className="text-sm mb-lg" style={{ marginBottom: 20 }}>
+          <strong>{stats.eligibleCount} exams</strong> match your profile
+          {stats.deadlinesThisWeek > 0 && <> · <strong style={{ color: 'var(--error)' }}>{stats.deadlinesThisWeek} deadline{stats.deadlinesThisWeek > 1 ? 's' : ''} this week</strong></>}
+        </p>
+
+        {/* Hero: best match */}
+        {bestMatch ? (
+          <Link to={`/exams/${bestMatch.exam.id}`} className="card mb-lg" style={{ display: 'block', border: 'none', background: 'var(--primary)', color: '#fff' }}>
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs" style={{ opacity: 0.7, marginBottom: 4 }}>TOP MATCH FOR YOU</p>
+                <h2 style={{ fontSize: 20, fontWeight: 700 }}>{bestMatch.exam.short_name}</h2>
+              </div>
+              {bestMatch.matchPercent != null && (
+                <span style={{ fontSize: 22, fontWeight: 700, color: '#8fa7fe' }}>{bestMatch.matchPercent}%</span>
+              )}
+            </div>
+            <p className="text-sm mt-md" style={{ marginTop: 10, opacity: 0.85 }}>
+              {bestMatch.daysLeft != null && bestMatch.daysLeft >= 0
+                ? `Application closes in ${bestMatch.daysLeft} day${bestMatch.daysLeft === 1 ? '' : 's'}`
+                : 'Check application window'}
+            </p>
+            <div className="flex items-center gap-xs mt-md" style={{ marginTop: 14, color: '#8fa7fe', fontWeight: 600, fontSize: 14 }}>
+              View details <Icon name="arrow_forward" size={16} />
+            </div>
+          </Link>
+        ) : (
+          <div className="card mb-lg" style={{ textAlign: 'center' }}>
+            <Icon name="explore" style={{ color: 'var(--outline)' }} />
+            <p className="text-sm text-muted mt-md" style={{ marginTop: 8 }}>
+              Complete your profile to see which exams you match.
+            </p>
+            <Link to="/profile" className="btn btn-primary btn-sm mt-md" style={{ marginTop: 12 }}>Complete profile</Link>
+          </div>
+        )}
+
+        {/* Compact upcoming deadlines — only if there's more than just the hero exam */}
+        {upcomingDeadlines.filter(d => d.exam.id !== bestMatch?.exam.id).length > 0 && (
           <>
-            {data.stats.profileCompletion < 100 && (
-              <Link to="/profile" className="card mb-md" style={{ display: 'block', background: 'var(--surface-container-low)', border: 'none' }}>
-                <div className="flex justify-between items-center mb-sm">
-                  <span className="text-sm" style={{ fontWeight: 600 }}>Complete your profile</span>
-                  <span className="text-sm" style={{ fontWeight: 600, color: 'var(--secondary)' }}>{data.stats.profileCompletion}%</span>
-                </div>
-                <ProgressBar value={data.stats.profileCompletion} />
-                <p className="text-xs text-muted mt-md" style={{ marginTop: 8 }}>Add missing details for accurate eligibility results.</p>
-              </Link>
-            )}
-
-            <div className="grid-2 mb-md">
-              <StatCard icon="fact_check" value={data.stats.eligibleCount} label="Exams You're Eligible For" color="#10b981" />
-              <StatCard icon="travel_explore" value={data.stats.totalExams} label="Exams Tracked in Orbit" />
-              <StatCard icon="assignment" value={data.stats.applicationsInProgress} label="Applications In Progress" color="#d97706" />
-              <StatCard icon="bookmark" value={data.stats.savedCount} label="Saved Items" />
+            <div className="flex justify-between items-center mb-sm">
+              <h3 style={{ fontSize: 15, fontWeight: 600 }}>Also worth a look</h3>
+              <Link to="/eligibility" className="text-sm" style={{ color: 'var(--secondary)', fontWeight: 600 }}>See all</Link>
             </div>
-
-            <div className="flex justify-between items-center mb-sm mt-lg">
-              <h3 style={{ fontSize: 16, fontWeight: 600 }}>Upcoming Deadlines</h3>
-              <Link to="/exams" className="text-sm" style={{ color: 'var(--secondary)', fontWeight: 600 }}>See all</Link>
+            <div className="flex-col gap-sm mb-lg">
+              {upcomingDeadlines.filter(d => d.exam.id !== bestMatch?.exam.id).slice(0, 3).map(d => (
+                <Link key={d.exam.id} to={`/exams/${d.exam.id}`} className="card flex justify-between items-center" style={{ padding: '12px 16px' }}>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>{d.exam.short_name}</span>
+                  <span className="text-xs text-muted">
+                    {d.matchPercent != null ? `${d.matchPercent}% match · ` : ''}
+                    {d.daysLeft != null && d.daysLeft >= 0 ? `${d.daysLeft}d left` : 'Check dates'}
+                  </span>
+                </Link>
+              ))}
             </div>
-            {data.upcomingDeadlines.length === 0 ? (
-              <EmptyState icon="event_available" title="No upcoming deadlines" description="You're all caught up. Explore exams to find new opportunities." />
-            ) : (
-              <div className="flex-col gap-sm">
-                {data.upcomingDeadlines.map(d => (
-                  <Link key={d.exam.id} to={`/exams/${d.exam.id}`} className="card" style={{ borderLeft: `4px solid ${d.exam.accent_color}`, display: 'block' }}>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p style={{ fontWeight: 600, fontSize: 15 }}>{d.exam.short_name}</p>
-                        <p className="text-xs text-muted mt-md" style={{ marginTop: 2 }}>Apply by {fmtDate(d.exam.application_end)}</p>
-                      </div>
-                      <EligibilityBadge status={d.overall} />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            <div className="flex justify-between items-center mb-sm mt-lg">
-              <h3 style={{ fontSize: 16, fontWeight: 600 }}>Your Applications</h3>
-              <Link to="/tracker" className="text-sm" style={{ color: 'var(--secondary)', fontWeight: 600 }}>Open tracker</Link>
-            </div>
-            {data.recentApplications.length === 0 ? (
-              <EmptyState icon="assignment" title="Nothing tracked yet" description="Start tracking an exam application from the Explore tab." action={<Link to="/exams" className="btn btn-primary">Explore Exams</Link>} />
-            ) : (
-              <div className="flex-col gap-sm">
-                {data.recentApplications.map(a => (
-                  <div key={a.id} className="card flex justify-between items-center" style={{ borderLeft: `4px solid ${a.accent_color}` }}>
-                    <span style={{ fontWeight: 600, fontSize: 15 }}>{a.exam_short_name}</span>
-                    <span className="badge badge-neutral">{STATUS_LABEL[a.status]}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </>
+        )}
+
+        {stats.profileCompletion < 100 && (
+          <Link to="/profile" className="card flex items-center gap-sm" style={{ background: 'var(--surface-container-low)', border: 'none' }}>
+            <Icon name="person_add" style={{ color: 'var(--secondary)' }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ fontWeight: 600, fontSize: 14 }}>Your profile is {stats.profileCompletion}% complete</p>
+              <p className="text-xs text-muted">Add missing details for more accurate matches</p>
+            </div>
+            <Icon name="chevron_right" style={{ color: 'var(--outline)' }} />
+          </Link>
         )}
       </div>
     </div>

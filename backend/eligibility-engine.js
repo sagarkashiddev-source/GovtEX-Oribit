@@ -42,8 +42,9 @@ function evaluateExam(user, education, physical, exam) {
     const minOk = !exam.min_age || age >= exam.min_age;
     const maxOk = !exam.max_age || age <= effectiveMax;
     ageResult.status = minOk && maxOk ? 'pass' : 'fail';
-    ageResult.detail = `You are ${age} yrs (as of ${cutoffDate}). Required: ${exam.min_age}-${exam.max_age} yrs` +
-      (relax ? ` (+${relax} yrs relaxation for ${user.category})` : '') + '.';
+    const ageRangeText = exam.max_age ? `${exam.min_age}-${exam.max_age + relax} yrs` : `${exam.min_age}+ yrs (no upper limit)`;
+    ageResult.detail = `You are ${age} yrs (as of ${cutoffDate}). Required: ${ageRangeText}` +
+      (relax && exam.max_age ? ` (includes +${relax} yr relaxation for ${user.category})` : '') + '.';
   }
   criteria.push(ageResult);
 
@@ -99,7 +100,15 @@ function evaluateExam(user, education, physical, exam) {
   if (hasFail) overall = 'not_eligible';
   else if (hasIncomplete) overall = 'incomplete';
 
-  return { examId: exam.id, overall, criteria };
+  // Match percentage: share of determinable criteria (pass/fail) that pass.
+  // Criteria still marked "incomplete" (missing profile info) are excluded from
+  // the denominator rather than counted against the user.
+  const determinable = criteria.filter(c => c.status === 'pass' || c.status === 'fail');
+  const matchPercent = determinable.length
+    ? Math.round(100 * determinable.filter(c => c.status === 'pass').length / determinable.length)
+    : null;
+
+  return { examId: exam.id, overall, matchPercent, criteria };
 }
 
 module.exports = { evaluateExam, calcAge, QUALIFICATION_RANK, AGE_RELAXATION_YEARS };

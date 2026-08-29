@@ -138,5 +138,109 @@ ensureColumn('notes', 'pdf_path', 'TEXT');
 ensureColumn('notes', 'pdf_original_name', 'TEXT');
 ensureColumn('videos', 'video_path', 'TEXT');
 ensureColumn('videos', 'youtube_url', 'TEXT');
+ensureColumn('exams', 'notification_url', 'TEXT');
+ensureColumn('exams', 'notification_date', 'TEXT');
+ensureColumn('exams', 'correction_window', 'TEXT');
+ensureColumn('exams', 'admit_card_date', 'TEXT');
+ensureColumn('exams', 'result_date', 'TEXT');
+ensureColumn('exams', 'age_cutoff_date', 'TEXT');
+ensureColumn('exams', 'selection_stages', "TEXT DEFAULT '[]'");
+ensureColumn('exams', 'data_source', "TEXT DEFAULT 'illustrative'");
+ensureColumn('exams', 'verified_at', 'TEXT');
+
+// --- Real, web-researched data for a handful of exams (as of 29 Aug 2026) ---
+// Applied by short_name match so it upgrades both fresh seeds and already-deployed
+// databases the same way. Everything else in the catalog remains clearly-labeled
+// illustrative data until researched the same way.
+const VERIFIED_EXAMS = [
+  {
+    short_name: 'SSC CGL',
+    min_age: 18, max_age: 32, age_cutoff_date: '2026-08-01',
+    min_qualification: 'Graduate', min_percentage: 0,
+    notification_url: 'https://ssc.gov.in', notification_date: '2026-05-21',
+    application_start: '2026-05-21', application_end: '2026-06-25',
+    correction_window: '2026-07-01 to 2026-07-03',
+    exam_date: '2026-09-01', admit_card_date: 'Released region-wise, ~3-7 days before Tier 1',
+    result_date: null, vacancies: 12256, fee_general: 100, fee_reserved: 0,
+    selection_stages: JSON.stringify(['Tier 1 (Computer Based Test)', 'Tier 2 (Computer Based Test)', 'Document Verification', 'Medical Examination (post-specific)']),
+    official_link: 'https://ssc.gov.in'
+  },
+  {
+    short_name: 'IBPS PO',
+    min_age: 20, max_age: 30, age_cutoff_date: '2026-07-01',
+    min_qualification: 'Graduate', min_percentage: 0,
+    notification_url: 'https://ibps.in', notification_date: '2026-07-01',
+    application_start: '2026-07-01', application_end: '2026-07-21',
+    correction_window: null,
+    exam_date: '2026-08-22', admit_card_date: 'Released via login before each stage',
+    result_date: null, vacancies: 7565, fee_general: 850, fee_reserved: 175,
+    selection_stages: JSON.stringify(['Prelims', 'Mains', 'Personality Test / Interview', 'Provisional Allotment']),
+    official_link: 'https://ibps.in'
+  },
+  {
+    short_name: 'CTET',
+    min_age: 18, max_age: 0, age_cutoff_date: null,
+    min_qualification: '12th', min_percentage: 0,
+    notification_url: 'https://ctet.nic.in', notification_date: '2026-05-11',
+    application_start: '2026-08-25', application_end: '2026-09-01',
+    correction_window: '2026-06-15 to 2026-06-18 (earlier window)',
+    exam_date: 'Postponed from 6 Sep 2026 — revised date not yet announced', admit_card_date: null,
+    result_date: null, vacancies: 0, fee_general: 1000, fee_reserved: 500,
+    selection_stages: JSON.stringify(['Written Exam (Paper 1 and/or Paper 2)', 'Lifetime-valid eligibility certificate on passing']),
+    official_link: 'https://ctet.nic.in',
+    description: 'National-level teacher eligibility test for primary (Paper 1, min. Class 12 + 2-yr Diploma in Elementary Education) and upper-primary (Paper 2, min. Graduate + B.Ed) teaching posts. Passing gives a lifetime-valid eligibility certificate, not a job directly.'
+  },
+  {
+    short_name: 'State Police Constable',
+    name: 'SSC GD Constable', short_name_new: 'SSC GD Constable',
+    min_age: 18, max_age: 23, age_cutoff_date: '2026-01-01',
+    min_qualification: '10th', min_percentage: 0,
+    requires_physical: 1,
+    physical_standards: JSON.stringify({ male: { height: 170, chest: 80 }, female: { height: 157, chest: 0 } }),
+    notification_url: 'https://ssc.gov.in', notification_date: '2025-12-01',
+    application_start: '2025-12-01', application_end: '2025-12-31',
+    correction_window: null,
+    exam_date: 'Computer Based Exam date to be announced', admit_card_date: null,
+    result_date: null, vacancies: 25487, fee_general: 100, fee_reserved: 0,
+    selection_stages: JSON.stringify(['Computer Based Examination', 'Physical Efficiency Test (PET)', 'Physical Standard Test (PST)', 'Medical Examination (BMI 18-25)']),
+    official_link: 'https://ssc.gov.in',
+    description: 'Recruitment of General Duty Constables into central armed police forces (BSF, CISF, CRPF, ITBP and others). A uniformed, field-duty role — physical and medical standards apply alongside the written exam.'
+  }
+];
+
+const updateVerified = db.prepare(`
+  UPDATE exams SET
+    name = COALESCE(@name, name),
+    short_name = COALESCE(@new_short_name, short_name),
+    min_age=@min_age, max_age=@max_age, age_cutoff_date=@age_cutoff_date,
+    min_qualification=@min_qualification, min_percentage=@min_percentage,
+    requires_physical = COALESCE(@requires_physical, requires_physical),
+    physical_standards = COALESCE(@physical_standards, physical_standards),
+    notification_url=@notification_url, notification_date=@notification_date,
+    application_start=@application_start, application_end=@application_end,
+    correction_window=@correction_window, exam_date=@exam_date, admit_card_date=@admit_card_date,
+    result_date=@result_date, vacancies=@vacancies, fee_general=@fee_general, fee_reserved=@fee_reserved,
+    selection_stages=@selection_stages, official_link=@official_link,
+    description = COALESCE(@description, description),
+    data_source='verified', verified_at=@verified_at
+  WHERE short_name = @short_name
+`);
+const VERIFIED_AT = '2026-08-29';
+db.transaction(() => {
+  VERIFIED_EXAMS.forEach(e => {
+    const exists = db.prepare('SELECT id FROM exams WHERE short_name = ?').get(e.short_name);
+    if (!exists) return; // catalog changed; skip silently rather than error
+    updateVerified.run({
+      name: e.name || null, new_short_name: e.short_name_new || null,
+      requires_physical: e.requires_physical ?? null,
+      physical_standards: e.physical_standards || null, description: e.description || null,
+      verified_at: VERIFIED_AT,
+      ...Object.fromEntries(['short_name','min_age','max_age','age_cutoff_date','min_qualification','min_percentage',
+        'notification_url','notification_date','application_start','application_end','correction_window','exam_date',
+        'admit_card_date','result_date','vacancies','fee_general','fee_reserved','selection_stages','official_link']
+        .map(k => [k, e[k] ?? null]))
+    });
+  });
+})();
 
 module.exports = db;

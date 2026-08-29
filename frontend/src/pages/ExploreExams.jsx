@@ -9,6 +9,7 @@ import { LoadingList, EmptyState } from '../components/States';
 export default function ExploreExams() {
   const [exams, setExams] = useState(null);
   const [eligMap, setEligMap] = useState({});
+  const [matchMap, setMatchMap] = useState({});
   const [savedSet, setSavedSet] = useState(new Set());
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState([]);
@@ -17,9 +18,9 @@ export default function ExploreExams() {
   useEffect(() => {
     api.get('/exams/categories').then(d => setCategories(d.categories));
     api.get('/eligibility').then(d => {
-      const map = {};
-      d.results.forEach(r => { map[r.exam.id] = r.overall; });
-      setEligMap(map);
+      const map = {}; const matches = {};
+      d.results.forEach(r => { map[r.exam.id] = r.overall; matches[r.exam.id] = r.matchPercent; });
+      setEligMap(map); setMatchMap(matches);
     });
     api.get('/saved?type=exam').then(d => setSavedSet(new Set(d.items.map(i => i.item_id))));
   }, []);
@@ -64,7 +65,7 @@ export default function ExploreExams() {
         ) : (
           <div className="flex-col gap-sm">
             {exams.map(exam => (
-              <ExamCard key={exam.id} exam={exam} eligibility={eligMap[exam.id]} onSave={toggleSave} saved={savedSet.has(exam.id)} />
+              <ExamCard key={exam.id} exam={exam} eligibility={eligMap[exam.id]} matchPercent={matchMap[exam.id]} onSave={toggleSave} saved={savedSet.has(exam.id)} />
             ))}
           </div>
         )}

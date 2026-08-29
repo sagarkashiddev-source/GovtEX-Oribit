@@ -52,7 +52,7 @@ export default function EligibilityStatus() {
           <EmptyState icon="fact_check" title="Nothing here yet" description="Try a different filter." />
         ) : (
           <div className="flex-col gap-sm">
-            {results.map(r => <ExamCard key={r.exam.id} exam={r.exam} eligibility={r.overall} />)}
+            {results.map(r => <ExamCard key={r.exam.id} exam={r.exam} eligibility={r.overall} matchPercent={r.matchPercent} />)}
           </div>
         )}
       </div>

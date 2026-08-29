@@ -180,16 +180,43 @@ be running on your local PC for this part.
   skippable, resumable (redirects to the right step based on `onboarding_step`).
 - **Eligibility engine:** evaluates each exam against age (with SC/ST/OBC/EWS relaxation),
   minimum qualification, minimum percentage, and gender-specific physical standards
-  (height/chest) where applicable. Returns per-criterion pass/fail/incomplete plus an
-  overall status.
-- **Explore Exams:** search + category filter, save/bookmark, eligibility badges inline.
-- **Exam Detail:** full eligibility breakdown, add-to-tracker / mark-as-applied actions.
-- **My Eligibility Status:** all exams grouped by eligible / not eligible / incomplete.
-- **Application Tracker:** draft → applied → admit card → exam taken → result pipeline.
-- **Study Library:** subject list → notes (PDF-style) and video lectures per subject,
-  global video search, note detail view with full content.
-- **Saved items:** bookmark exams, notes, and videos; unified saved list with type filters.
+  (height/chest) where applicable. Returns per-criterion pass/fail/incomplete, an overall
+  status, and a **match percentage** (share of determinable criteria that pass).
+- **Real, verified exam data:** 4 of the 8 seeded exams (SSC CGL, IBPS PO, CTET, SSC GD
+  Constable) use actual 2026-cycle data researched from official notifications and major
+  exam-prep sources as of 29 Aug 2026 — real age limits, application windows, selection
+  stages, fees, and a link to the official notification. Each shows a "Verified from
+  official notification" badge with the last-checked date. The remaining 4 (RRB NTPC,
+  UPSC CDS, NDA, SSC MTS) are still illustrative and clearly marked as such — replace them
+  the same way (see `backend/db.js`, the `VERIFIED_EXAMS` array) as you research them.
+- **Calm, focused redesign:** a single "top match" hero card on the home screen instead of
+  a stat-grid dashboard; inline "92% match · Eligible" text instead of big colored boxes;
+  progressive disclosure on exam pages (only "Why you're eligible" is expanded by default —
+  dates/fees, selection process, and the official notification link are collapsed until
+  requested); 5-item navigation (Home, Explore, Prepare, My Exams, Profile) instead of 6.
+- **Explore Exams:** search + category filter, save/bookmark, match % and eligibility
+  inline on every card.
+- **Exam Detail:** match %, eligibility breakdown, dates/fee/selection-process in
+  collapsible sections, verified-data badge, add-to-tracker / mark-as-applied actions.
+- **My Eligibility Status:** all exams grouped by eligible / not eligible / incomplete,
+  each showing its match %.
+- **My Exams:** applications (draft → applied → admit card → exam taken → result) and
+  saved items, merged into one page with two tabs.
+- **Study Library ("Prepare"):** subject list → notes (PDF-style) and video lectures per
+  subject, global video search, note detail view with full content.
+- **Real content uploads:** a hidden `/admin` page (gated by `ADMIN_KEY`) for uploading
+  real PDFs to notes and either uploading a real video file or pasting a YouTube link for
+  video lectures — see the section above for details.
 - **Profile:** edit all onboarding data any time; logout.
+
+## What's next (from a product review, not yet built)
+
+A few rounds of feedback on this project proposed a much larger roadmap: a bigger exam
+catalog researched exam-by-exam, deadline notifications, a personal exam calendar, mock
+tests with weak-topic analysis, an AI assistant wired to a real LLM, Postgres + proper
+security hardening, regional languages, and analytics. None of that is built yet — the
+redesign and the first batch of verified exam data above are step one. See the
+conversation history / your own notes for the fuller roadmap if you want to keep going.
 
 ## Sample login
 

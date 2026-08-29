@@ -5,9 +5,8 @@ import Icon from './Icon';
 const ITEMS = [
   { to: '/dashboard', icon: 'home', label: 'Home' },
   { to: '/exams', icon: 'travel_explore', label: 'Explore' },
-  { to: '/eligibility', icon: 'fact_check', label: 'Eligibility' },
-  { to: '/tracker', icon: 'assignment', label: 'Tracker' },
-  { to: '/library', icon: 'menu_book', label: 'Library' },
+  { to: '/library', icon: 'menu_book', label: 'Prepare' },
+  { to: '/my-exams', icon: 'bookmarks', label: 'My Exams' },
   { to: '/profile', icon: 'person', label: 'Profile' }
 ];
 

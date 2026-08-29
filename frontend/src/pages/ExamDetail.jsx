@@ -3,15 +3,29 @@ import { useParams } from 'react-router-dom';
 import { api } from '../api';
 import TopBar from '../components/TopBar';
 import Icon from '../components/Icon';
-import { EligibilityBadge } from '../components/Widgets';
+import Collapsible from '../components/Collapsible';
 import { LoadingList, ErrorBanner } from '../components/States';
 
 const CRITERIA_ICON = { pass: 'check_circle', fail: 'cancel', incomplete: 'info', unknown: 'help' };
 const CRITERIA_COLOR = { pass: '#10b981', fail: '#ba1a1a', incomplete: '#d97706', unknown: '#75777d' };
 
 function fmtDate(d) {
-  if (!d) return '-';
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (!d) return '—';
+  const parsed = new Date(d);
+  if (isNaN(parsed)) return d; // some real dates are text, e.g. "postponed, TBA"
+  return parsed.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function daysLeft(dateStr) {
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  return Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
+}
+
+function overallLabel(overall) {
+  if (overall === 'eligible') return { text: 'Eligible', color: 'var(--success)', icon: 'check_circle' };
+  if (overall === 'not_eligible') return { text: 'Not eligible', color: 'var(--error)', icon: 'cancel' };
+  return { text: 'Check your profile', color: 'var(--warning)', icon: 'info' };
 }
 
 export default function ExamDetail() {
@@ -55,7 +69,11 @@ export default function ExamDetail() {
     </div>
   );
 
-  const { exam, overall, criteria } = data;
+  const { exam, overall, matchPercent, criteria } = data;
+  const status = overallLabel(overall);
+  const dl = daysLeft(exam.application_end);
+  let stages = [];
+  try { stages = JSON.parse(exam.selection_stages || '[]'); } catch (e) { /* noop */ }
 
   return (
     <div className="app-shell">
@@ -65,45 +83,43 @@ export default function ExamDetail() {
         right={<button onClick={toggleSave} style={{ background: 'none', border: 'none' }} aria-label="Save"><Icon name={saved ? 'bookmark' : 'bookmark_border'} style={{ color: saved ? 'var(--secondary)' : 'var(--outline)' }} /></button>}
       />
       <div className="page-container">
-        <div style={{ borderLeft: `4px solid ${exam.accent_color}`, paddingLeft: 12, marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700 }}>{exam.name}</h2>
-          <p className="text-sm text-muted mt-md" style={{ marginTop: 4 }}>{exam.conducting_body}</p>
+        <p className="text-sm text-muted mb-sm">{exam.conducting_body}</p>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 10 }}>{exam.name}</h2>
+
+        {/* Inline match line instead of a big colored box */}
+        <div className="flex items-center gap-xs mb-sm" style={{ fontSize: 14 }}>
+          {matchPercent != null && <strong style={{ fontSize: 16 }}>{matchPercent}% match</strong>}
+          <span style={{ color: 'var(--outline)' }}>·</span>
+          <span style={{ color: status.color, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Icon name={status.icon} size={16} /> {status.text}
+          </span>
         </div>
 
-        <div className="card mb-md">
-          <div className="flex justify-between items-center mb-sm">
-            <span style={{ fontWeight: 600 }}>Overall Eligibility</span>
-            <EligibilityBadge status={overall} />
+        {dl != null && (
+          <p className="text-sm mb-md" style={{ marginBottom: 12 }}>
+            {dl >= 0
+              ? <>Application closes in <strong>{dl} day{dl === 1 ? '' : 's'}</strong> ({fmtDate(exam.application_end)})</>
+              : <span className="text-muted">Application window closed on {fmtDate(exam.application_end)}</span>}
+          </p>
+        )}
+
+        {exam.data_source === 'verified' ? (
+          <div className="flex items-center gap-xs mb-lg" style={{ fontSize: 12, color: 'var(--success-text)' }}>
+            <Icon name="verified" size={14} /> Verified from official notification · Last checked {fmtDate(exam.verified_at)}
           </div>
-          <p className="text-sm text-muted">{exam.description}</p>
-        </div>
-
-        <div className="grid-2 mb-md">
-          <div className="card"><p className="text-xs text-muted">Application Window</p><p style={{ fontWeight: 600, fontSize: 14 }}>{fmtDate(exam.application_start)} – {fmtDate(exam.application_end)}</p></div>
-          <div className="card"><p className="text-xs text-muted">Exam Date</p><p style={{ fontWeight: 600, fontSize: 14 }}>{fmtDate(exam.exam_date)}</p></div>
-          <div className="card"><p className="text-xs text-muted">Vacancies</p><p style={{ fontWeight: 600, fontSize: 14 }}>{exam.vacancies || '—'}</p></div>
-          <div className="card"><p className="text-xs text-muted">Fee (Gen / Reserved)</p><p style={{ fontWeight: 600, fontSize: 14 }}>₹{exam.fee_general} / ₹{exam.fee_reserved}</p></div>
-        </div>
-
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Eligibility Breakdown</h3>
-        <div className="flex-col gap-sm mb-lg">
-          {criteria.map(c => (
-            <div key={c.key} className="card flex gap-sm" style={{ alignItems: 'flex-start' }}>
-              <Icon name={CRITERIA_ICON[c.status]} style={{ color: CRITERIA_COLOR[c.status], marginTop: 2 }} />
-              <div>
-                <p style={{ fontWeight: 600, fontSize: 14 }}>{c.label}</p>
-                <p className="text-sm text-muted mt-md" style={{ marginTop: 2 }}>{c.detail}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        ) : (
+          <div className="flex items-center gap-xs mb-lg" style={{ fontSize: 12, color: 'var(--warning-text)' }}>
+            <Icon name="info" size={14} /> Illustrative data — always confirm against the official notification before applying
+          </div>
+        )}
 
         <ErrorBanner message={error} />
 
-        <div className="flex-col gap-sm">
+        {/* Primary action up top, near the decision-relevant info */}
+        <div className="flex-col gap-sm mb-lg">
           {!application && (
             <button className="btn btn-primary btn-block" disabled={busy} onClick={() => track('draft')}>
-              <Icon name="add_task" /> Add to My Tracker
+              <Icon name="add_task" /> Track this exam
             </button>
           )}
           {application && application.status !== 'applied' && (
@@ -113,7 +129,7 @@ export default function ExamDetail() {
           )}
           {application && (
             <p className="text-sm text-muted" style={{ textAlign: 'center' }}>
-              Currently tracked as <strong>{application.status.replace('_', ' ')}</strong> — manage in the Tracker tab.
+              Currently tracked as <strong>{application.status.replace('_', ' ')}</strong> — manage in My Exams.
             </p>
           )}
           {exam.official_link && (
@@ -122,7 +138,65 @@ export default function ExamDetail() {
             </a>
           )}
         </div>
+
+        {/* Progressive disclosure: only "why eligible" is open by default */}
+        <Collapsible title="Why you're eligible" icon="fact_check" defaultOpen>
+          <div className="flex-col gap-sm">
+            {criteria.map(c => (
+              <div key={c.key} className="flex gap-sm" style={{ alignItems: 'flex-start' }}>
+                <Icon name={CRITERIA_ICON[c.status]} style={{ color: CRITERIA_COLOR[c.status], marginTop: 2 }} size={18} />
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: 14 }}>{c.label}</p>
+                  <p className="text-sm text-muted mt-md" style={{ marginTop: 2 }}>{c.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Collapsible>
+
+        <Collapsible title="Dates & Fee" icon="event">
+          <div className="flex-col gap-sm">
+            <Row label="Notification released" value={fmtDate(exam.notification_date)} />
+            <Row label="Application window" value={`${fmtDate(exam.application_start)} – ${fmtDate(exam.application_end)}`} />
+            {exam.correction_window && <Row label="Correction window" value={exam.correction_window} />}
+            <Row label="Exam date" value={fmtDate(exam.exam_date)} />
+            {exam.admit_card_date && <Row label="Admit card" value={exam.admit_card_date} />}
+            {exam.result_date && <Row label="Result" value={fmtDate(exam.result_date)} />}
+            <Row label="Vacancies" value={exam.vacancies || 'Not specified'} />
+            <Row label="Fee (General / Reserved)" value={`₹${exam.fee_general} / ₹${exam.fee_reserved}`} />
+          </div>
+        </Collapsible>
+
+        {stages.length > 0 && (
+          <Collapsible title="Selection Process" icon="checklist">
+            <div className="flex-col gap-sm">
+              {stages.map((s, i) => (
+                <div key={i} className="flex items-center gap-sm">
+                  <span className="badge badge-neutral" style={{ minWidth: 24, justifyContent: 'center' }}>{i + 1}</span>
+                  <span className="text-sm">{s}</span>
+                </div>
+              ))}
+            </div>
+          </Collapsible>
+        )}
+
+        {exam.notification_url && (
+          <Collapsible title="Official Notification" icon="description">
+            <a href={exam.notification_url} target="_blank" rel="noreferrer" className="text-sm" style={{ color: 'var(--secondary)', fontWeight: 600 }}>
+              {exam.notification_url} <Icon name="open_in_new" size={14} />
+            </a>
+          </Collapsible>
+        )}
       </div>
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <div className="flex justify-between" style={{ gap: 12 }}>
+      <span className="text-sm text-muted">{label}</span>
+      <span className="text-sm" style={{ fontWeight: 600, textAlign: 'right' }}>{value}</span>
     </div>
   );
 }

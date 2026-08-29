@@ -2,16 +2,17 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from './Icon';
 
+const STATUS_TEXT = {
+  eligible: { text: 'Eligible', color: 'var(--success-text)', icon: 'check_circle' },
+  not_eligible: { text: 'Not eligible', color: 'var(--error-text)', icon: 'cancel' },
+  incomplete: { text: 'Check profile', color: 'var(--warning-text)', icon: 'info' }
+};
+
 export function EligibilityBadge({ status }) {
-  const map = {
-    eligible: { cls: 'badge-success', icon: 'check_circle', label: 'Eligible' },
-    not_eligible: { cls: 'badge-error', icon: 'cancel', label: 'Not Eligible' },
-    incomplete: { cls: 'badge-warning', icon: 'info', label: 'Check Profile' }
-  };
-  const m = map[status] || map.incomplete;
+  const m = STATUS_TEXT[status] || STATUS_TEXT.incomplete;
   return (
-    <span className={`badge ${m.cls}`}>
-      <Icon name={m.icon} size={14} /> {m.label}
+    <span className="text-sm" style={{ color: m.color, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <Icon name={m.icon} size={15} /> {m.text}
     </span>
   );
 }
@@ -25,12 +26,13 @@ export function ProgressBar({ value }) {
 }
 
 function daysLeft(dateStr) {
-  if (!dateStr) return null;
-  const diff = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  const diff = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
   return diff;
 }
 
-export function ExamCard({ exam, eligibility, onSave, saved }) {
+export function ExamCard({ exam, eligibility, matchPercent, onSave, saved }) {
   const navigate = useNavigate();
   const dl = daysLeft(exam.application_end);
   return (
@@ -55,12 +57,15 @@ export function ExamCard({ exam, eligibility, onSave, saved }) {
           </button>
         )}
       </div>
-      <div className="flex items-center gap-xs mt-md" style={{ flexWrap: 'wrap' }}>
+      <div className="flex items-center gap-xs mt-md text-sm" style={{ flexWrap: 'wrap', marginTop: 8 }}>
+        {matchPercent != null && <strong>{matchPercent}% match</strong>}
+        {matchPercent != null && eligibility && <span style={{ color: 'var(--outline)' }}>·</span>}
         {eligibility && <EligibilityBadge status={eligibility} />}
         {dl != null && (
-          <span className="badge badge-neutral">
-            <Icon name="schedule" size={14} /> {dl > 0 ? `${dl}d left to apply` : 'Applications closed'}
-          </span>
+          <>
+            <span style={{ color: 'var(--outline)' }}>·</span>
+            <span className="text-muted">{dl >= 0 ? `${dl}d left to apply` : 'Applications closed'}</span>
+          </>
         )}
       </div>
     </div>
