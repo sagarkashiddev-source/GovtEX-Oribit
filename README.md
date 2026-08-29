@@ -130,6 +130,22 @@ docker run -d -p 80:4000 -e JWT_SECRET=<your-secret> -v govtex-data:/app govtex-
 The `-v govtex-data:/app` volume keeps the SQLite file persistent across container
 restarts on a VPS you control.
 
+## Installing it as an app on your phone or PC
+
+GovtEx Orbit is set up as a **Progressive Web App (PWA)**: it has a real app icon and a
+manifest, so once it's deployed (e.g. on Railway/Render), you can install it like a native
+app straight from the browser — no app store needed.
+
+- **Android (Chrome):** open the site → tap the **⋮** menu → **Install app** (or you'll see
+  an automatic "Add GovtEx Orbit to Home screen" banner). It installs with its own icon and
+  opens full-screen, no browser bar.
+- **iPhone/iPad (Safari):** open the site → tap the **Share** icon → **Add to Home Screen**.
+- **Desktop (Chrome/Edge):** open the site → click the **install icon** in the address bar
+  (or menu → **Install GovtEx Orbit…**). It opens in its own window like a desktop app.
+
+This works on whatever URL you deployed to (e.g. your Railway domain) — it doesn't need to
+be running on your local PC for this part.
+
 ## What's implemented
 
 - **Auth:** signup / login (JWT, 30-day session), protected routes.
